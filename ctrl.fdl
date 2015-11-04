@@ -1,11 +1,3 @@
-dp addi(in a, i 	: tc(32);
-		in sel 		: ns(1);	
-		out r 		: tc(32)){
-	always{
-		r = sel ? a + i : a;
-	}
-}
-
 dp xor(	in a, b : tc(32); 
 		out r : ns(1)){
 	always{
@@ -135,7 +127,7 @@ dp aluctr(	in aluop 	: ns(4);
 			out alus 	: ns(2))
 {
 	always{
-		alus = (aluop == 0b0010) ? 1 : (aluop == 0b0001) ? 2 : (aluop == 0b1000) ? 3 : 0;
+		alus = (aluop == 0b0010 | aluop == 0b0110) ? 1 : (aluop == 0b0001) ? 2 : (aluop == 0b1000) ? 3 : 0;
 	}
 }
 
@@ -183,7 +175,7 @@ dp CPU(){
 		//$display($hex, "inst: ",inst, ", pc_out: ", pc_out);
 		$display($dec, "pc_out: ", pc_out ,$bin, ", up=", inst[28:31], ", ra=", inst[25:27] ,
 		", rb=", inst[22:24], ", rs=", inst[19:21], ", im=",inst[0:15]);
-		$display($dec, "Alu=", alu_out, ", RW=", regwrite);
+		$display($dec, "Alu=", alu_out, ", RW=", regwrite, ", a=", a);
 
 		//im = inst[0:15];
 		//rs = inst[19:21];
