@@ -114,12 +114,15 @@ dp instmemFetch(
 
 dp control(	in up					: ns(4);
 			out regwrite, muxalus	: ns(1);
-			out aluop				: ns(4))
+			out aluop				: ns(4);
+			out bzero, branch		: ns(1))
 {
 	always{
 		regwrite = ((up == 0b0000) | (up == 0b0001) | (up == 0b0010) | (up == 0b0100) | (up == 0b0110) | (up == 0b1000)) ? 1 : 0;
 		muxalus = ((up == 0b0000) | (up == 0b0011) | (up == 0b0101) | (up == 0b0110) | (up == 0b0111)) ? 1 : 0;
 		aluop = up;
+		bzero = (up == 0b0101);
+		branch = (up == 0b0111);
 	}
 }
 
@@ -131,42 +134,61 @@ dp aluctr(	in aluop 	: ns(4);
 	}
 }
 
+dp and(	in a,b 	: ns(1); 
+		out r 	: ns(1))
+{
+	always{
+		r = a & b;
+	}
+}
+
+dp or(	in a,b : ns(1); 
+		out r : ns(1))
+{
+	always{
+		r = a | b;
+	}
+}
+
 
 dp PC(	in jump 		: ns(1);
-		in jump_target	: ns(5);
+		in target 		: ns(5);
 		out pc_out 		: ns(5))
 	{
 	reg PCr	: ns(5);
 
 	always{
-		pc_out = (jump) ? jump_target : PCr + 1;
+		pc_out = (jump) ? target : PCr + 1;
 		PCr = pc_out;
 	}
 }
 
 dp CPU(){
-	sig pc_out 			: ns(5);
+	sig pc_out		 	: ns(5);
 	sig inst 			: ns(32);
 	sig regwrite 		: ns(1);
 	sig alu_ope			: ns(4);
 	sig storedata 		: ns(32);
 	sig a, b, muxaluo	: tc(32);
 	sig alus			: ns(2);
-	sig zero			: ns(1);
+	reg zero			: ns(1);
 	sig alu_out 		: tc(32);
 	sig extendo 		: tc(32);
 	sig muxalus 		: ns(1);
-	//sig jump : ns(1);
-	//sig jump_target : ns(5);
-	use PC(0,0,pc_out); // Should take jump , jump_target
+	sig jump, andout 	: ns(1);
+	sig branch, bzero	: ns(1);
+
+	use PC(jump, extendo[0:4],pc_out);
 	use instmem(pc_out,0,1,0,inst);
-	use control(inst[28:31],regwrite,muxalus,alu_ope);
+	use control(inst[28:31],regwrite,muxalus,alu_ope,bzero,branch);
 	use register(inst[25:27],inst[22:24],inst[19:21],regwrite,alu_out,a,b); //aluout should be storedata
 	use aluctr(alu_ope,alus); 
 	use alu(a,muxaluo,alus,alu_out,zero); // muxaluo instead of b
 	use signExtend(inst[0:15],extendo);
+	use and(zero, bzero, andout);
+	use or(andout, branch, jump);
 	use muxalu(muxalus,b,extendo,muxaluo);
-	//use muxpc();
+	//use muxpc(jump,pc_out,extendo[0:4],pc_in);
 	//use muxmem();
 
 
@@ -175,7 +197,7 @@ dp CPU(){
 		//$display($hex, "inst: ",inst, ", pc_out: ", pc_out);
 		$display($dec, "pc_out: ", pc_out ,$bin, ", up=", inst[28:31], ", ra=", inst[25:27] ,
 		", rb=", inst[22:24], ", rs=", inst[19:21], ", im=",inst[0:15]);
-		$display($dec, "Alu=", alu_out, ", RW=", regwrite, ", a=", a);
+		$display($dec, "Alu=", alu_out, ", andout=", andout, ", jump=", jump, ", bzero=", bzero, ", zero=", zero);
 
 		//im = inst[0:15];
 		//rs = inst[19:21];

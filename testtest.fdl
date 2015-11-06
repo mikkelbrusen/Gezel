@@ -177,8 +177,8 @@ dp CPU(
 	use alu(mux2o, b, mux4alus, aluout, neg);
 	use and(neg, bneg, andout);
 	use or(andout, branch, orout);
-	use mux6bit(orout, extendo[5:0], instA, mux1o);
-	use mux19bit2(mux4alus, aluout, M_dataout, mux4o);
+	use mux6bit(orout, extendo[5:0], instA, mux1o); // 
+	use mux19bit2(mux4alus, aluout, M_dataout, mux4o); // after data mem
 	use mux19bit3(mux3s, addout, mux4o, storedata);	  
 	use pcor(rd, wr, pcorout);
 	use xor(pcorout, M_datainrdy, stall);
