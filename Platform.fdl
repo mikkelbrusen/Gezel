@@ -35,7 +35,8 @@ dp alu(
   always{
     r = (sel==1) ? a + b :
       (sel==2) ? a - b : 
-      (sel==3) ? a>>5 : 
+      (sel==3) ? a>>5 :
+      (sel==4) ? a : 
              b;
     z = (r == 0) ? 1 : 0;
   }
@@ -47,44 +48,44 @@ dp register(
   in storedata      : ns(32);
   out a,b         : tc(32)
 ){
-  reg m0,m1,m2,m3,m4,m5,m6,m7 : tc(32);
+  reg r0,r1,r2,r3,r4,r5,r6,r7 : tc(32);
   always{
-    a = (asel==0) ? m0 : 
-      (asel==1) ? m1 :
-      (asel==2) ? m2 :
-      (asel==3) ? m3 :
-      (asel==4) ? m4 : 
-      (asel==5) ? m5 :
-      (asel==6) ? m6 : 
-            m7;
+    a = (asel==0) ? r0 : 
+      (asel==1) ? r1 :
+      (asel==2) ? r2 :
+      (asel==3) ? r3 :
+      (asel==4) ? r4 : 
+      (asel==5) ? r5 :
+      (asel==6) ? r6 : 
+            r7;
 
-    b = (bsel==0) ? m0 : 
-      (bsel==1) ? m1 :
-      (bsel==2) ? m2 :
-      (bsel==3) ? m3 :
-      (bsel==4) ? m4 : 
-      (bsel==5) ? m5 :
-      (bsel==6) ? m6 : 
-            m7;
+    b = (bsel==0) ? r0 : 
+      (bsel==1) ? r1 :
+      (bsel==2) ? r2 :
+      (bsel==3) ? r3 :
+      (bsel==4) ? r4 : 
+      (bsel==5) ? r5 :
+      (bsel==6) ? r6 : 
+            r7;
 
-    m1 = (storeenable==1) ? (storesel==1) ? storedata : m1: m1 ;
-    m2 = (storeenable==1) ? (storesel==2) ? storedata : m2: m2 ;
-    m3 = (storeenable==1) ? (storesel==3) ? storedata : m3: m3 ;
-    m4 = (storeenable==1) ? (storesel==4) ? storedata : m4: m4 ;
-    m5 = (storeenable==1) ? (storesel==5) ? storedata : m5: m5 ;
-    m6 = (storeenable==1) ? (storesel==6) ? storedata : m6: m6 ;
-    m7 = (storeenable==1) ? (storesel==7) ? storedata : m7: m7 ;
+    r1 = (storeenable==1) ? (storesel==1) ? storedata : r1: r1 ;
+    r2 = (storeenable==1) ? (storesel==2) ? storedata : r2: r2 ;
+    r3 = (storeenable==1) ? (storesel==3) ? storedata : r3: r3 ;
+    r4 = (storeenable==1) ? (storesel==4) ? storedata : r4: r4 ;
+    r5 = (storeenable==1) ? (storesel==5) ? storedata : r5: r5 ;
+    r6 = (storeenable==1) ? (storesel==6) ? storedata : r6: r6 ;
+    r7 = (storeenable==1) ? (storesel==7) ? storedata : r7: r7 ;
 
-    $display($dec, "m1:", m1, ", m2:", m2);
+    $display($dec, "r1:", r1, ", r2:", r2, ", r3:", r3);
   }
 
-  $trace(m1, "traces/m1.seq");
-  $trace(m2, "traces/m2.seq");
-  $trace(m3, "traces/m3.seq");
-  $trace(m4, "traces/m4.seq");
-  $trace(m5, "traces/m5.seq");
-  $trace(m6, "traces/m6.seq");
-  $trace(m7, "traces/m7.seq");
+  $trace(r1, "traces/r1.seq");
+  $trace(r2, "traces/r2.seq");
+  $trace(r3, "traces/r3.seq");
+  $trace(r4, "traces/r4.seq");
+  $trace(r5, "traces/r5.seq");
+  $trace(r6, "traces/r6.seq");
+  $trace(r7, "traces/r7.seq");
 }
 
 dp signExtend( 
@@ -137,7 +138,7 @@ dp control( in up         : ns(4);
 {
   always{
     regwrite = ((up == 0b1001) | (up == 0b0001) | (up == 0b0010) | (up == 0b0100) | (up == 0b0110) | (up == 0b1000)) ? 1 : 0;
-    muxalus = ((up == 0b1001) | (up == 0b0101) | (up == 0b0110) | (up == 0b0111)) ? 1 : 0;
+    muxalus = ((up == 0b0011) | (up == 0b1001) | (up == 0b0101) | (up == 0b0110) | (up == 0b0111)) ? 1 : 0;
     aluop = up;
     bzero = (up == 0b0101);
     branch = (up == 0b0111);
@@ -151,7 +152,7 @@ dp aluctr(  in aluop  : ns(4);
       out alus  : ns(2))
 {
   always{
-    alus = (aluop == 0b0010 | aluop == 0b0110) ? 1 : (aluop == 0b0001) ? 2 : (aluop == 0b1000) ? 3 : 0;
+    alus = (aluop == 0b0010 | aluop == 0b0110) ? 1 : (aluop == 0b0001) ? 2 : (aluop == 0b1000) ? 3 : (aluop == 0b0011) ? 4 : 0;
   }
 }
 
@@ -237,11 +238,11 @@ dp CPU(
 
 
        always{
-       		M_datain = muxaluo;
-       		M_cmd =  (mwr == 1) ? ( 0b00101000000000000000000000000000 | b) :
+       		M_datain = b;
+       		M_cmd =  (mwr == 1) ? ( 671088640 | alu_out) :
                    (mrd == 1) ? 536870912 : 0;
        		M_datainrdy = mrd | mwr;
-          $display($dec, "mrd:",mrd,", mwr:",mwr, ", rdy: ", M_dataoutrdy, ", dout:", M_dataout);
+          $display($dec, "mrd:",mrd,", mwr:",mwr, ", rdy: ", M_dataoutrdy, ", dout:", M_dataout, ", datain:", M_datain);
        }       
 }
 
