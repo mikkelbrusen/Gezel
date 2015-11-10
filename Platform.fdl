@@ -30,7 +30,7 @@ dp alu(
   in a, b   :tc(32);
   in sel    :ns(2); 
   out r   :tc(32);
-  out z :ns(1))
+  out n :ns(1))
 {
   always{
     r = (sel==1) ? a + b :
@@ -38,7 +38,7 @@ dp alu(
       (sel==3) ? a>>5 :
       (sel==4) ? a : 
              b;
-    z = ((r == 0) | (r<=0)) ? 1 : 0;
+    n = (r<=0) ? 1 : 0;
   }
 }
 
@@ -134,14 +134,14 @@ dp instmemFetch(
 dp control( in up         : ns(4);
       out regwrite, muxalus : ns(1);
       out aluop       : ns(4);
-      out bzero, branch   : ns(1);
+      out bneg, branch   : ns(1);
       out mwr, mrd, muxmems : ns(1))
 {
   always{
     regwrite = ((up == 0b1001) | (up == 0b0001) | (up == 0b0010) | (up == 0b0100) | (up == 0b0110) | (up == 0b1000)) ? 1 : 0;
     muxalus = ((up == 0b0011) | (up == 0b1001) | (up == 0b0101) | (up == 0b0110) | (up == 0b0111)) ? 1 : 0;
     aluop = up;
-    bzero = (up == 0b0101);
+    bneg = (up == 0b0101);
     branch = (up == 0b0111);
     mwr = (up == 0b0011);
     mrd = (up == 0b1001); 
@@ -203,24 +203,24 @@ dp CPU(
         sig storedata     : ns(32);
         sig a, b, muxaluo : tc(32);
         sig alus      : ns(2);
-        reg zero      : ns(1);
+        reg neg      : ns(1);
         sig alu_out     : tc(32);
         sig extendo     : tc(32);
         sig muxalus     : ns(1);
         sig jump, andout  : ns(1);
-        sig branch, bzero : ns(1);
+        sig branch, bneg : ns(1);
         sig mwr, mrd  : ns(1);
         sig stall, memoro, muxmems : ns(1);
         sig muxmemo : ns(32);
 
         use PC(jump, extendo[0:4], stall, pc_out);
         use instmem(pc_out,0,1,0,inst);
-        use control(inst[28:31],regwrite,muxalus,alu_ope,bzero,branch,mwr,mrd,muxmems);
+        use control(inst[28:31],regwrite,muxalus,alu_ope,bneg,branch,mwr,mrd,muxmems);
         use register(inst[25:27],inst[22:24],inst[19:21],regwrite,muxmemo,a,b);
         use aluctr(alu_ope,alus); 
-        use alu(a,muxaluo,alus,alu_out,zero);
+        use alu(a,muxaluo,alus,alu_out,neg);
         use signExtend(inst[0:15],extendo);
-        use and(zero, bzero, andout);
+        use and(neg, bneg, andout);
         use or(andout, branch, jump);
         use muxalu(muxalus,b,extendo,muxaluo);
         use memor(mwr,mrd,memoro);
@@ -228,10 +228,10 @@ dp CPU(
         use muxmem(muxmems,alu_out,M_dataout,muxmemo);
 
         $trace(alu_out, "traces/aluOut.seq");
-        $trace(bzero, "traces/bzero.seq");
+        $trace(bneg, "traces/bneg.seq");
         $trace(branch, "traces/branch.seq");
         $trace(stall, "traces/stall.seq");
-        $trace(zero, "traces/zero.seq");
+        $trace(neg, "traces/neg.seq");
         $trace(jump, "traces/jump.seq");
         $trace(M_dataoutrdy, "traces/rdy.seq");
         $trace(mwr, "traces/mwr.seq");
