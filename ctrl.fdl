@@ -188,16 +188,13 @@ dp CPU(){
 	use and(zero, bzero, andout);
 	use or(andout, branch, jump);
 	use muxalu(muxalus,b,extendo,muxaluo);
-	//use muxpc(jump,pc_out,extendo[0:4],pc_in);
 	//use muxmem();
 
 
 	always{
-		//$display($dec, "Cycle:", $cycle);
-		//$display($hex, "inst: ",inst, ", pc_out: ", pc_out);
 		$display($dec, "pc_out: ", pc_out ,$bin, ", up=", inst[28:31], ", ra=", inst[25:27] ,
 		", rb=", inst[22:24], ", rs=", inst[19:21], ", im=",inst[0:15]);
-		$display($dec, "Alu=", alu_out, ", andout=", andout, ", jump=", jump, ", bzero=", bzero, ", zero=", zero);
+		$display($dec, "Alu=", alu_out, ", branch=", branch, ", bzero=", bzero, ", zero=", zero);
 
 		//im = inst[0:15];
 		//rs = inst[19:21];
