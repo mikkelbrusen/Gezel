@@ -38,7 +38,7 @@ dp alu(
       (sel==3) ? a>>5 :
       (sel==4) ? a : 
              b;
-    z = (r == 0) ? 1 : 0;
+    z = ((r == 0) | (r<=0)) ? 1 : 0;
   }
 }
 
@@ -76,7 +76,8 @@ dp register(
     r6 = (storeenable==1) ? (storesel==6) ? storedata : r6: r6 ;
     r7 = (storeenable==1) ? (storesel==7) ? storedata : r7: r7 ;
 
-    $display($dec, "r1:", r1, ", r2:", r2, ", r3:", r3);
+    //$display($dec,"r4:", r4);
+    $display($dec,"r4:",r4);
   }
 
   $trace(r1, "traces/r1.seq");
@@ -242,7 +243,9 @@ dp CPU(
        		M_cmd =  (mwr == 1) ? ( 671088640 | alu_out) :
                    (mrd == 1) ? 536870912 : 0;
        		M_datainrdy = mrd | mwr;
-          $display($dec, "mrd:",mrd,", mwr:",mwr, ", rdy: ", M_dataoutrdy, ", dout:", M_dataout, ", datain:", M_datain);
+          //$display($dec, "mrd:",mrd,", mwr:",mwr, ", rdy: ", M_dataoutrdy, ", dout:", M_dataout, ", datain:", M_datain);
+          //$display($dec,"pc:",pc_out);
+          //$display($dec, "Cycle:",$cycle);
        }       
 }
 
