@@ -1,0 +1,144 @@
+dp add(
+  in a,b  :tc(32);
+  out r   :tc(32))
+  {
+    always{
+      r = a + b;
+    }
+  }
+
+dp sub(
+  in a,b  :tc(32);
+  out r   :tc(32))
+  {
+    always{
+      r = a - b;
+    }
+  }
+
+dp div32(
+  in a  :tc(32);
+  out r   :tc(32))
+  {
+    always{
+      r = a>>5;
+    }
+  }
+
+dp register(
+  in sel   : ns(5); 
+  in new      : ns(32);
+  out old     : ns(32);
+  out sum     : ns(32); 
+  ){
+  reg r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,r13,r14,r15,r16   : tc(32);
+  reg r17,r18,r19,r20,r21,r22,r23,r24,r25,r26,r27,r28,r29,r30,r31,r32 : tc(32);
+  always{
+    old = (sel==0) ? r0 : 
+      (asel==1) ? r1 :
+      (asel==2) ? r2 :
+      (asel==3) ? r3 :
+      (asel==4) ? r4 : 
+      (asel==5) ? r5 :
+      (asel==6) ? r6 :
+      (asel==7) ? r7 :
+      (asel==8) ? r8 :
+      (asel==9) ? r9 :
+      (asel==10) ? r10 : 
+      (asel==11) ? r11 :
+      (asel==12) ? r12 :
+      (asel==13) ? r13 :
+      (asel==14) ? r14 :
+      (asel==15) ? r15 :
+      (asel==16) ? r16 : 
+      (asel==17) ? r17 :
+      (asel==18) ? r18 :
+      (asel==19) ? r19 :
+      (asel==20) ? r20 :
+      (asel==21) ? r21 :
+      (asel==22) ? r22 : 
+      (asel==23) ? r23 :
+      (asel==24) ? r24 :
+      (asel==25) ? r25 :
+      (asel==26) ? r26 :
+      (asel==27) ? r27 :
+      (asel==28) ? r28 : 
+      (asel==29) ? r29 :
+      (asel==30) ? r30 :
+                   r31;
+
+    sum = r32;
+
+    r0 = (sel==0) ? new : r0 ;
+    r1 = (sel==1) ? new : r1 ;
+    r2 = (sel==2) ? new : r2 ;
+    r3 = (sel==3) ? new : r3 ;
+    r4 = (sel==4) ? new : r4 ;
+    r5 = (sel==5) ? new : r5 ;
+    r6 = (sel==6) ? new : r6 ;
+    r7 = (sel==7) ? new : r7 ;
+    r8 = (sel==8) ? new : r8 ;
+    r9 = (sel==9) ? new : r9 ;
+    r10 = (sel==10) ? new : r10 ;
+    r11 = (sel==11) ? new : r11 ;
+    r12 = (sel==12) ? new : r12 ;
+    r13 = (sel==13) ? new : r13 ;
+    r14 = (sel==14) ? new : r14 ;
+    r15 = (sel==15) ? new : r15 ;
+    r16 = (sel==16) ? new : r16 ;
+    r17 = (sel==17) ? new : r17 ;
+    r18 = (sel==18) ? new : r18 ;
+    r19 = (sel==19) ? new : r19 ;
+    r20 = (sel==20) ? new : r20 ;
+    r21 = (sel==21) ? new : r21 ;
+    r22 = (sel==22) ? new : r22 ;
+    r23 = (sel==23) ? new : r23 ;
+    r24 = (sel==24) ? new : r24 ;
+    r25 = (sel==25) ? new : r25 ;
+    r26 = (sel==26) ? new : r26 ;
+    r27 = (sel==27) ? new : r27 ;
+    r28 = (sel==28) ? new : r28 ;
+    r29 = (sel==29) ? new : r29 ;
+    r30 = (sel==30) ? new : r30 ;
+    r31 = (sel==31) ? new : r31 ;
+  }
+  }
+
+dp PC(  in branch : ns(1);
+    in target     : ns(5);
+    in stall      : ns(1);
+    out pc_out    : ns(5))
+  {
+  reg PCr : ns(5);
+
+  always{
+    pc_out = (branch) ? target : PCr + 1 - stall;
+    PCr = pc_out;
+  }
+}
+
+dp Co_CPU(
+           in M_datain : ns(32);
+           in M_cmd : ns(32);
+           in M_datainrdy : ns(1);
+           out M_dataout : ns(32);
+           out M_dataoutrdy : ns(1)
+       ){
+        sig pc_out      : ns(5);
+        sig old     : ns(32);
+        sig sum     : ns(32);
+        sig sumsub  : ns(32);
+        sig finalsum: ns(32);
+        sig stall   : ns(1);
+        reg result  : ns(32);
+
+        use PC(extendo[0:4], stall, pc_out);
+        use register(pc_out,M_datain,old,sum);
+        use sub(sum,old,sumsub);
+        use add(sumsub,M_datain,finalsum);
+        use div32(finalsum,result);
+
+       always{
+          
+       }       
+}

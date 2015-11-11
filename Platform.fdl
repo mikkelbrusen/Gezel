@@ -74,8 +74,12 @@ dp register(
     r6 = (storeenable==1) ? (storesel==6) ? storedata : r6: r6 ;
     r7 = (storeenable==1) ? (storesel==7) ? storedata : r7: r7 ;
 
-    //$display($dec,"r7:", r7);
-    $display($dec,"r4:",r4);
+    //$display($dec,"r7:", r7);  // New data pointer
+    //$display($dec,"r2:",r2);  // Old data pointer
+    //$display($dec,"r1:",r1);  // New data 
+    //$display($dec,"r6:"r6);  // Old data
+    //$display($dec,"r3:",r3);  // sum
+    $display($dec,"r4:",r4);  // Result inspection
   }
 
   $trace(r1, "traces/r1.seq");
