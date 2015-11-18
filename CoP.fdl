@@ -28,6 +28,7 @@ dp div32(
 dp register(
   in sel   : ns(5); 
   in new      : ns(32);
+  in newsum   : ns(32);
   out old     : ns(32);
   out sum     : ns(32); 
   ){
@@ -68,6 +69,7 @@ dp register(
                    r31;
 
     sum = r32;
+    r32 = newsum;
 
     r0 = (sel==0) ? new : r0 ;
     r1 = (sel==1) ? new : r1 ;
@@ -104,41 +106,55 @@ dp register(
   }
   }
 
-dp PC(  in branch : ns(1);
-    in target     : ns(5);
-    in stall      : ns(1);
-    out pc_out    : ns(5))
-  {
-  reg PCr : ns(5);
+dp inrdyreg(in outrdy : ns(1);
+            out inrdy : ns(1))
+{
+  reg rinrdy : ns(1);
 
   always{
-    pc_out = (branch) ? target : PCr + 1 - stall;
+    rinrdy = outrdy;
+    inrdy = rinrdy;
+  }
+}
+
+dp PC(  in outrdy        : ns(1);
+        in inrdy         : ns(1);
+        out pc_out    : ns(5))
+  {
+  reg PCr : ns(5);
+  sig incVal : ns(1);
+  sig Val : ns(5);
+
+  always{
+    incVal = (~outrdy) & inrdy;
+    Val = PCr + incval;
     PCr = pc_out;
+    pc_out = (Val == 31) ? 0 : Val;
   }
 }
 
 dp Co_CPU(
-           in M_datain : ns(32);
-           in M_cmd : ns(32);
-           in M_datainrdy : ns(1);
-           out M_dataout : ns(32);
-           out M_dataoutrdy : ns(1)
+           in S_dataout : ns(32);
+           in S_cmdout : ns(32);
+           in S_dataoutrdy : ns(1);
+           out S_datain : ns(32);
+           out S_datainrdy : ns(1)
        ){
         sig pc_out      : ns(5);
         sig old     : ns(32);
         sig sum     : ns(32);
         sig sumsub  : ns(32);
         sig finalsum: ns(32);
-        sig stall   : ns(1);
         reg result  : ns(32);
 
-        use PC(extendo[0:4], stall, pc_out);
-        use register(pc_out,M_datain,old,sum);
+        use PC(S_dataoutrdy,S_datainrdy pc_out);
+        use register(pc_out,S_dataout,finalsum,old,sum);
         use sub(sum,old,sumsub);
-        use add(sumsub,M_datain,finalsum);
+        use add(sumsub,M_dataout,finalsum);
         use div32(finalsum,result);
+        use inrdyreg(S_dataoutrdy,S_datainrdy);
 
        always{
-          
+          S_datain = result;
        }       
 }
