@@ -27,82 +27,83 @@ dp div32(
 
 dp register(
   in sel   : ns(5); 
+  in storeenable : ns(1);
   in new      : ns(32);
   in newsum   : ns(32);
   out old     : ns(32);
-  out sum     : ns(32); 
+  out sum     : ns(32) 
   ){
   reg r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,r13,r14,r15,r16   : tc(32);
   reg r17,r18,r19,r20,r21,r22,r23,r24,r25,r26,r27,r28,r29,r30,r31,r32 : tc(32);
   always{
     old = (sel==0) ? r0 : 
-      (asel==1) ? r1 :
-      (asel==2) ? r2 :
-      (asel==3) ? r3 :
-      (asel==4) ? r4 : 
-      (asel==5) ? r5 :
-      (asel==6) ? r6 :
-      (asel==7) ? r7 :
-      (asel==8) ? r8 :
-      (asel==9) ? r9 :
-      (asel==10) ? r10 : 
-      (asel==11) ? r11 :
-      (asel==12) ? r12 :
-      (asel==13) ? r13 :
-      (asel==14) ? r14 :
-      (asel==15) ? r15 :
-      (asel==16) ? r16 : 
-      (asel==17) ? r17 :
-      (asel==18) ? r18 :
-      (asel==19) ? r19 :
-      (asel==20) ? r20 :
-      (asel==21) ? r21 :
-      (asel==22) ? r22 : 
-      (asel==23) ? r23 :
-      (asel==24) ? r24 :
-      (asel==25) ? r25 :
-      (asel==26) ? r26 :
-      (asel==27) ? r27 :
-      (asel==28) ? r28 : 
-      (asel==29) ? r29 :
-      (asel==30) ? r30 :
+      (sel==1) ? r1 :
+      (sel==2) ? r2 :
+      (sel==3) ? r3 :
+      (sel==4) ? r4 : 
+      (sel==5) ? r5 :
+      (sel==6) ? r6 :
+      (sel==7) ? r7 :
+      (sel==8) ? r8 :
+      (sel==9) ? r9 :
+      (sel==10) ? r10 : 
+      (sel==11) ? r11 :
+      (sel==12) ? r12 :
+      (sel==13) ? r13 :
+      (sel==14) ? r14 :
+      (sel==15) ? r15 :
+      (sel==16) ? r16 : 
+      (sel==17) ? r17 :
+      (sel==18) ? r18 :
+      (sel==19) ? r19 :
+      (sel==20) ? r20 :
+      (sel==21) ? r21 :
+      (sel==22) ? r22 : 
+      (sel==23) ? r23 :
+      (sel==24) ? r24 :
+      (sel==25) ? r25 :
+      (sel==26) ? r26 :
+      (sel==27) ? r27 :
+      (sel==28) ? r28 : 
+      (sel==29) ? r29 :
+      (sel==30) ? r30 :
                    r31;
 
     sum = r32;
-    r32 = newsum;
+    r32 = storeenable ? newsum : r32;
 
-    r0 = (sel==0) ? new : r0 ;
-    r1 = (sel==1) ? new : r1 ;
-    r2 = (sel==2) ? new : r2 ;
-    r3 = (sel==3) ? new : r3 ;
-    r4 = (sel==4) ? new : r4 ;
-    r5 = (sel==5) ? new : r5 ;
-    r6 = (sel==6) ? new : r6 ;
-    r7 = (sel==7) ? new : r7 ;
-    r8 = (sel==8) ? new : r8 ;
-    r9 = (sel==9) ? new : r9 ;
-    r10 = (sel==10) ? new : r10 ;
-    r11 = (sel==11) ? new : r11 ;
-    r12 = (sel==12) ? new : r12 ;
-    r13 = (sel==13) ? new : r13 ;
-    r14 = (sel==14) ? new : r14 ;
-    r15 = (sel==15) ? new : r15 ;
-    r16 = (sel==16) ? new : r16 ;
-    r17 = (sel==17) ? new : r17 ;
-    r18 = (sel==18) ? new : r18 ;
-    r19 = (sel==19) ? new : r19 ;
-    r20 = (sel==20) ? new : r20 ;
-    r21 = (sel==21) ? new : r21 ;
-    r22 = (sel==22) ? new : r22 ;
-    r23 = (sel==23) ? new : r23 ;
-    r24 = (sel==24) ? new : r24 ;
-    r25 = (sel==25) ? new : r25 ;
-    r26 = (sel==26) ? new : r26 ;
-    r27 = (sel==27) ? new : r27 ;
-    r28 = (sel==28) ? new : r28 ;
-    r29 = (sel==29) ? new : r29 ;
-    r30 = (sel==30) ? new : r30 ;
-    r31 = (sel==31) ? new : r31 ;
+    r0 = storeenable ? (sel==0) ? new : r0 : r0;
+    r1 = storeenable ? (sel==1) ? new : r1 : r1;
+    r2 = storeenable ? (sel==2) ? new : r2 : r2;
+    r3 = storeenable ? (sel==3) ? new : r3 : r3;
+    r4 = storeenable ? (sel==4) ? new : r4 : r4;
+    r5 = storeenable ? (sel==5) ? new : r5 : r5;
+    r6 = storeenable ? (sel==6) ? new : r6 : r6;
+    r7 = storeenable ? (sel==7) ? new : r7 : r7;
+    r8 = storeenable ? (sel==8) ? new : r8 : r8;
+    r9 = storeenable ? (sel==9) ? new : r9 : r9;
+    r10 = storeenable ? (sel==10) ? new : r10 : r10;
+    r11 = storeenable ? (sel==11) ? new : r11 : r11;
+    r12 = storeenable ? (sel==12) ? new : r12 : r12;
+    r13 = storeenable ? (sel==13) ? new : r13 : r13;
+    r14 = storeenable ? (sel==14) ? new : r14 : r14;
+    r15 = storeenable ? (sel==15) ? new : r15 : r15;
+    r16 = storeenable ? (sel==16) ? new : r16 : r16;
+    r17 = storeenable ? (sel==17) ? new : r17 : r17;
+    r18 = storeenable ? (sel==18) ? new : r18 : r18;
+    r19 = storeenable ? (sel==19) ? new : r19 : r19;
+    r20 = storeenable ? (sel==20) ? new : r20 : r20;
+    r21 = storeenable ? (sel==21) ? new : r21 : r21;
+    r22 = storeenable ? (sel==22) ? new : r22 : r22;
+    r23 = storeenable ? (sel==23) ? new : r23 : r23;
+    r24 = storeenable ? (sel==24) ? new : r24 : r24;
+    r25 = storeenable ? (sel==25) ? new : r25 : r25;
+    r26 = storeenable ? (sel==26) ? new : r26 : r26;
+    r27 = storeenable ? (sel==27) ? new : r27 : r27;
+    r28 = storeenable ? (sel==28) ? new : r28 : r28;
+    r29 = storeenable ? (sel==29) ? new : r29 : r29;
+    r30 = storeenable ? (sel==30) ? new : r30 : r30;
+    r31 = storeenable ? (sel==31) ? new : r31 : r31;
   }
   }
 
@@ -127,13 +128,13 @@ dp PC(  in outrdy        : ns(1);
 
   always{
     incVal = (~outrdy) & inrdy;
-    Val = PCr + incval;
-    PCr = pc_out;
+    Val = PCr + outrdy;
     pc_out = (Val == 31) ? 0 : Val;
+    PCr = pc_out;
   }
 }
 
-dp Co_CPU(
+dp CoP(
            in S_dataout : ns(32);
            in S_cmdout : ns(32);
            in S_dataoutrdy : ns(1);
@@ -147,10 +148,10 @@ dp Co_CPU(
         sig finalsum: ns(32);
         reg result  : ns(32);
 
-        use PC(S_dataoutrdy,S_datainrdy pc_out);
-        use register(pc_out,S_dataout,finalsum,old,sum);
+        use PC(S_dataoutrdy,S_datainrdy,pc_out);
+        use register(pc_out,S_dataoutrdy,S_dataout,finalsum,old,sum);
         use sub(sum,old,sumsub);
-        use add(sumsub,M_dataout,finalsum);
+        use add(sumsub,S_dataout,finalsum);
         use div32(finalsum,result);
         use inrdyreg(S_dataoutrdy,S_datainrdy);
 
@@ -158,3 +159,37 @@ dp Co_CPU(
           S_datain = result;
        }       
 }
+
+dp testCoP(
+  out S_dataout : ns(32);
+  out S_cmdout : ns(32);
+  out S_dataoutrdy : ns(1);
+  in S_datain : ns(32);
+  in S_datainrdy : ns(1))
+  {
+  always{
+    $display($dec, "Outrdy:", S_dataoutrdy, ", Inrdy:", S_datainrdy, ", Out:", S_dataout , ", In:", S_datain);
+  }
+
+  sfg test_0 { S_dataout=100; S_cmdout=1; S_dataoutrdy=1;}
+  sfg test_1 { S_dataout=101; S_cmdout=1; S_dataoutrdy=1;}
+  sfg test_2 { S_dataout=102; S_cmdout=1; S_dataoutrdy=1;}
+  sfg test_3 { S_dataout=103; S_cmdout=1; S_dataoutrdy=1;}
+  }
+
+  // note : State machine to control the adder testbench.
+  fsm f_testbench(testCoP)
+  {
+    initial s0; // begin with state s0
+    state s1, s2, s3; // other states are: s1, s2
+    @s0 (test_0) -> s1; // run test_0 and go to s1
+    @s1 (test_1) -> s2; // run test_1 and go to s2
+    @s2 (test_2) -> s3; // run test_2 and go to s3
+    @s3 (test_3) -> s0; // run test_3 and go to s0
+  }
+
+  system myFirstSystem
+  {
+    CoP(S_dataout, S_cmdout, S_dataoutrdy, S_datain, S_datainrdy);
+    testCoP(S_dataout, S_cmdout, S_dataoutrdy, S_datain, S_datainrdy);
+  }
