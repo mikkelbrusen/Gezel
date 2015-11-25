@@ -79,7 +79,7 @@ dp register(
     //$display($dec,"r1:",r1);  // New data 
     //$display($dec,"r6:"r6);  // Old data
     //$display($dec,"r3:",r3);  // sum
-    $display($dec,"r4:",r4);  // Result inspection
+    //$display($dec,"r4:",r4);  // Result inspection
   }
 
   $trace(r1, "traces/r1.seq");
@@ -122,17 +122,18 @@ dp control( in up         : ns(4);
       out regwrite, muxalus : ns(1);
       out alus       : ns(2);
       out bneg, branch   : ns(1);
-      out mwr, mrd, muxmems : ns(1))
+      out mwr, mrd, muxmems, cops : ns(1))
 {
   always{
-    regwrite = ((up == 0b1001) | (up == 0b0001) | (up == 0b0010) | (up == 0b0100) | (up == 0b0110) | (up == 0b1000)) ? 1 : 0;
+    regwrite = ((up == 0b1010) | (up == 0b1001) | (up == 0b0001) | (up == 0b0010) | (up == 0b0100) | (up == 0b0110) | (up == 0b1000)) ? 1 : 0;
     muxalus = ((up == 0b0011) | (up == 0b1001) | (up == 0b0101) | (up == 0b0110) | (up == 0b0111)) ? 1 : 0;
     alus = (up == 0b0010 | up == 0b0110) ? 1 : (up == 0b0001) ? 2 : (up == 0b1000) ? 3 : 0;
     bneg = (up == 0b0101);
     branch = (up == 0b0111);
     mwr = (up == 0b0011);
     mrd = (up == 0b1001); 
-    muxmems = (up == 0b1001);
+    muxmems = (up == 0b1001) | (up == 0b1010);
+    cops = (up == 0b1010);
   }
 }
 
@@ -188,19 +189,19 @@ dp CPU(
         sig jump, andout  : ns(1);
         sig branch, bneg : ns(1);
         sig mwr, mrd  : ns(1);
-        sig stall, memoro, muxmems : ns(1);
+        sig stall, memoro, muxmems,cops : ns(1);
         sig muxmemo : ns(32);
 
         use PC(jump, extendo[0:4], stall, pc_out);
         use instmem(pc_out,0,1,0,inst);
-        use control(inst[28:31],regwrite,muxalus,alus,bneg,branch,mwr,mrd,muxmems);
+        use control(inst[28:31],regwrite,muxalus,alus,bneg,branch,mwr,mrd,muxmems,cops);
         use register(inst[25:27],inst[22:24],inst[19:21],regwrite,muxmemo,a,b);
         use alu(a,muxaluo,alus,alu_out,neg);
         use signExtend(inst[0:15],extendo);
         use and(neg, bneg, andout);
         use or(andout, branch, jump);
         use muxalu(muxalus,b,extendo,muxaluo);
-        use memor(mwr,mrd,memoro);
+        use memor(cops,mrd,memoro);
         use xor(memoro,M_dataoutrdy,stall);
         use muxmem(muxmems,alu_out,M_dataout,muxmemo);
 
@@ -213,14 +214,18 @@ dp CPU(
         $trace(M_dataoutrdy, "traces/rdy.seq");
         $trace(mwr, "traces/mwr.seq");
         $trace(mrd, "traces/mrd.seq");
-
+        $trace(M_dataout, "traces/CPUM_dataout.seq");
+        $trace(pc_out, "traces/pc_out.seq");
+        $trace(cops, "traces/cops.seq");
 
        always{
        		M_datain = b;
        		M_cmd =  (mwr == 1) ? ( 0x28000000 | alu_out) :
-                   (mrd == 1) ? 0x20000000 : 0;
-       		M_datainrdy = mrd | mwr;
-          //$display($dec, "mrd:",mrd,", mwr:",mwr, ", rdy: ", M_dataoutrdy, ", dout:", M_dataout, ", datain:", M_datain);
+                   (mrd == 1) ? 0x20000000 : 
+                   (cops == 1) ? 0x40000000 : 0;
+       		M_datainrdy = mrd | mwr | cops;
+          //$display($dec, "mrd:",mrd,", rdy: ", M_dataoutrdy, ", dout:", M_dataout, ", datain:", M_datain);
+          //$display($dec, "cops:",cops,", rdy: ", M_dataoutrdy, ", dout:", M_dataout, ", datain:", M_datain,$bin, ", cmd:",M_cmd);
           //$display($dec,"pc:",pc_out);
           //$display($dec, "Cycle:",$cycle);
        }       
@@ -322,7 +327,7 @@ dp bus(
         
         always{
           ackCPU = (cmdCPU[28:31] == ID_CoP & ackCoP) | (cmdCPU[28:31] == ID_DataMem & ackDataMem) | (cmdCPU[28:31] == ID_Sensor & ackSensor) | (cmdCPU[28:31] == ID_Output & ackOutput); // "OR" all slaves ack signals here
-          dataRdyCPU = dataRdyCPU | dataRdyDataMem | dataRdySensor | dataRdyOutput; // Only one slave can access the bus at any one time (only the slave which responds to the cmd)
+          dataRdyCPU = dataRdyCoP | dataRdyDataMem | dataRdySensor | dataRdyOutput; // Only one slave can access the bus at any one time (only the slave which responds to the cmd)
           
           reqCoP = reqCPU;
           cmdCoP = (reqCoP) ? cmdCPU : 0;
@@ -1050,16 +1055,17 @@ dp CoPregister(
     r30 = storeenable ? (sel==30) ? new : r30 : r30;
     r31 = storeenable ? (sel==31) ? new : r31 : r31;
   }
+  $trace(r32, "traces/sum.seq");
   }
 
-dp CoPinrdyreg(in outrdy : ns(1);
-            out inrdy : ns(1))
+dp CoPoutrdyreg(in inrdy : ns(1);
+            out outrdy : ns(1))
 {
-  reg rinrdy : ns(1);
+  reg routrdy : ns(1);
 
   always{
-    rinrdy = outrdy;
-    inrdy = rinrdy;
+    routrdy = inrdy;
+    outrdy = routrdy;
   }
 }
 
@@ -1074,35 +1080,88 @@ dp CoPC(  in outrdy        : ns(1);
   always{
     incVal = (~outrdy) & inrdy;
     Val = PCr + outrdy;
-    pc_out = (Val == 31) ? 0 : Val;
+    pc_out = (Val == 32) ? 0 : Val;
     PCr = pc_out;
   }
 }
 
 dp CoP(
-           in S_dataout : ns(32);
-           in S_cmdout : ns(32);
-           in S_dataoutrdy : ns(1);
-           out S_datain : ns(32);
-           out S_datainrdy : ns(1)
-       ){
-        sig pc_out      : ns(5);
-        sig old     : ns(32);
-        sig sum     : ns(32);
-        sig sumsub  : ns(32);
-        sig finalsum: ns(32);
-        reg result  : ns(32);
+       in datain : ns(32);
+       in cmd : ns(32);
+       in datainrdy : ns(1);
+       out dataout : ns(32);
+       out dataoutrdy : ns(1);
+       in stall : ns(1)
+   ){
+    sig pc_out      : ns(5);
+    sig old     : ns(32);
+    sig sum     : ns(32);
+    sig sumsub  : ns(32);
+    sig finalsum: ns(32);
+    sig inc     : ns(1);
+    reg result  : ns(32);
 
-        use CoPC(S_dataoutrdy,S_datainrdy,pc_out);
-        use CoPregister(pc_out,S_dataoutrdy,S_dataout,finalsum,old,sum);
-        use CoPsub(sum,old,sumsub);
-        use CoPadd(sumsub,S_dataout,finalsum);
-        use CoPdiv32(finalsum,result);
-        use CoPinrdyreg(S_dataoutrdy,S_datainrdy);
+    reg datainrdyr : ns(1);
+    reg cmdr : ns(32);
+    reg datainr : ns(32);
+    reg dataoutr : ns(32);
+    reg stallr : ns(1);
 
-       always{
-          S_datain = result;
-       }       
+    use CoPC(datainrdy,inc,pc_out);
+    use CoPregister(pc_out,datainrdy,datain,finalsum,old,sum);
+    use CoPsub(sum,old,sumsub);
+    use CoPadd(sumsub,datain,finalsum);
+    use CoPdiv32(finalsum,result);
+    use CoPoutrdyreg(datainrdy,inc);
+
+   always{
+      stallr = stall;
+      dataoutr = result;
+      dataout = dataoutr;
+      //$display($dec,"inrdy:",datainrdy,", outrdy:",dataoutrdy,", dout:",dataout);
+   }   
+   $trace(datainrdy, "traces/COPdatainrdy.seq");
+   $trace(dataoutrdy, "traces/COPdataoutrdy.seq");
+   $trace(stall, "traces/COPstall.seq");
+   $trace(dataout, "traces/COPdataout.seq");
+   $trace(datain, "traces/COPdatain.seq");
+   $trace(old, "traces/COPold");
+   $trace(cmd, "traces/COPcmd.seq");  
+   $trace(dataoutr, "traces/COPdataoutr.seq");  
+   $trace(pc_out, "traces/COPCout");
+
+  sfg captureData{
+    dataoutrdy = 0; 
+    datainrdyr = datainrdy;
+    datainr = datain;
+    cmdr = cmd;
+  }
+
+  sfg awaithandshake{
+    dataoutrdy = 0;
+  }
+
+  sfg resetAndSignalRdy{
+    dataoutrdy = 1;
+    datainrdyr = 0;
+  }
+
+  sfg nothing{
+    dataoutrdy = 0; 
+  }
+}
+
+fsm DataMem_cntrl(CoP){
+   initial s0;
+   state s1, s2;
+   
+   @s0 if (datainrdyr == 1 & stallr == 0) then (resetAndSignalRdy) -> s0;
+       else if (datainrdyr == 1 & stallr == 1) then (awaithandshake) -> s1;
+       else (captureData) -> s0;
+   @s1 nothing -> s2;
+   @s2 if (stallr == 0) then (resetAndSignalRdy) -> s0;
+       else (awaithandshake) -> s2;
+       
 }
 
 ////////////////////////////
@@ -1118,7 +1177,7 @@ system CPUsystem{
            SensorDatain,SensorDatainrdy,SensorDataout,SensorCmdout,SensorDataoutrdy,SensorStall,  // slave (sensor)
            OPDatain,OPDatainrdy,OPDataout,OPCmdout,OPDataoutrdy,OPStall); // slave (Output)
 
-   CoP(COPDataout,COPCmdout,COPDataoutrdy,COPDatain,COPDatainrdy); // Co-Processor
+   CoP(COPDataout,COPCmdout,COPDataoutrdy,COPDatain,COPDatainrdy,COPStall); // Co-Processor
    DataMem(DMDataout,DMCmdout,DMDataoutrdy,DMDatain,DMDatainrdy,DMStall); // Data Memory Unit
    Sensor(SensorDataout,SensorCmdout,SensorDataoutrdy,SensorDatain,SensorDatainrdy,SensorStall);
    Output(OPDataout,OPCmdout,OPDataoutrdy,OPDatain,OPDatainrdy,OPStall,FilterOut);
