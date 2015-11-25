@@ -1,4 +1,4 @@
-dp add(
+dp CoPadd(
   in a,b  :tc(32);
   out r   :tc(32))
   {
@@ -7,7 +7,7 @@ dp add(
     }
   }
 
-dp sub(
+dp CoPsub(
   in a,b  :tc(32);
   out r   :tc(32))
   {
@@ -16,7 +16,7 @@ dp sub(
     }
   }
 
-dp div32(
+dp CoPdiv32(
   in a  :tc(32);
   out r   :tc(32))
   {
@@ -25,7 +25,7 @@ dp div32(
     }
   }
 
-dp register(
+dp CoPregister(
   in sel   : ns(5); 
   in storeenable : ns(1);
   in new      : ns(32);
@@ -107,7 +107,7 @@ dp register(
   }
   }
 
-dp inrdyreg(in outrdy : ns(1);
+dp CoPinrdyreg(in outrdy : ns(1);
             out inrdy : ns(1))
 {
   reg rinrdy : ns(1);
@@ -118,7 +118,7 @@ dp inrdyreg(in outrdy : ns(1);
   }
 }
 
-dp PC(  in outrdy        : ns(1);
+dp CoPC(  in outrdy        : ns(1);
         in inrdy         : ns(1);
         out pc_out    : ns(5))
   {
@@ -148,12 +148,12 @@ dp CoP(
         sig finalsum: ns(32);
         reg result  : ns(32);
 
-        use PC(S_dataoutrdy,S_datainrdy,pc_out);
-        use register(pc_out,S_dataoutrdy,S_dataout,finalsum,old,sum);
-        use sub(sum,old,sumsub);
-        use add(sumsub,S_dataout,finalsum);
-        use div32(finalsum,result);
-        use inrdyreg(S_dataoutrdy,S_datainrdy);
+        use CoPC(S_dataoutrdy,S_datainrdy,pc_out);
+        use CoPregister(pc_out,S_dataoutrdy,S_dataout,finalsum,old,sum);
+        use CoPsub(sum,old,sumsub);
+        use CoPadd(sumsub,S_dataout,finalsum);
+        use CoPdiv32(finalsum,result);
+        use CoPinrdyreg(S_dataoutrdy,S_datainrdy);
 
        always{
           S_datain = result;

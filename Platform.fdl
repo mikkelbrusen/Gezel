@@ -240,6 +240,16 @@ dp bus(
         out dataRdyCPU : ns(1); // high when unit has data, which is ready for the CPU
         out datainCPU : ns(32); // data to the CPU
         in waitCPU : ns(1); // Remains high until the CPU has read the data
+
+        // Co-Processor interface
+        out reqCoP : ns(1);
+        out cmdCoP : ns(32);
+        out datainCoP : ns(32); 
+        in ackCoP : ns(1);
+
+        in dataRdyCoP : ns(1);
+        in dataoutCoP : ns(32);
+        out waitCoP : ns(1);
                 
         // Data Memory interface
         out reqDataMem : ns(1);
@@ -274,7 +284,8 @@ dp bus(
         // IDs
         in ID_Sensor : ns(4);
         in ID_DataMem : ns(4);
-        in ID_Output : ns(4)
+        in ID_Output : ns(4);
+        in ID_CoP : ns(4)
 		
         ){
         
@@ -310,9 +321,13 @@ dp bus(
         $trace(waitCPU, "traces/waitCPU.seq");
         
         always{
-          ackCPU = (cmdCPU[28:31] == ID_DataMem & ackDataMem) | (cmdCPU[28:31] == ID_Sensor & ackSensor) | (cmdCPU[28:31] == ID_Output & ackOutput); // "OR" all slaves ack signals here
-          dataRdyCPU = dataRdyDataMem | dataRdySensor | dataRdyOutput; // Only one slave can access the bus at any one time (only the slave which responds to the cmd)
+          ackCPU = (cmdCPU[28:31] == ID_CoP & ackCoP) | (cmdCPU[28:31] == ID_DataMem & ackDataMem) | (cmdCPU[28:31] == ID_Sensor & ackSensor) | (cmdCPU[28:31] == ID_Output & ackOutput); // "OR" all slaves ack signals here
+          dataRdyCPU = dataRdyCPU | dataRdyDataMem | dataRdySensor | dataRdyOutput; // Only one slave can access the bus at any one time (only the slave which responds to the cmd)
           
+          reqCoP = reqCPU;
+          cmdCoP = (reqCoP) ? cmdCPU : 0;
+          datainCoP = (reqCPU) ? dataoutCPU : 0;
+
           reqDataMem = reqCPU;
           cmdDataMem = (reqCPU) ? cmdCPU : 0;
           datainDataMem = (reqCPU) ? dataoutCPU : 0;
@@ -326,11 +341,14 @@ dp bus(
           datainOutput = (reqCPU) ? dataoutCPU : 0;
           waitOutput = waitCPU;
                     
-          datainCPU = (dataRdyDataMem) ? dataoutDataMem : 
+          datainCPU = (dataRdyCoP) ? dataoutCoP :
+                      (dataRdyDataMem) ? dataoutDataMem : 
                       (dataRdySensor) ? dataoutSensor : 
                       (dataRdyOutput) ? dataoutOutput :
                       0; // arbitrate here when multiple slaves
           waitDataMem = waitCPU;
+          waitCoP = waitCPU;
+          // TODO: waitCoP ?
           
           NotUsed1 = 0;
         }       
@@ -444,6 +462,7 @@ fsm slavebusinterface_cntrl(slavebusinterface){
 
 dp slavebusinterface2 : slavebusinterface
 dp slavebusinterface3 : slavebusinterface
+dp slavebusinterface4 : slavebusinterface
 
 dp masterbusinterface(
           // Bus ports
@@ -565,6 +584,14 @@ dp bus_toplevel(
            out M_dataout : ns(32);
            out M_dataoutrdy : ns(1);
            //out stall_cpu : ns(1);
+
+           // Slave interface (CoP)
+           in COP_datain : ns(32);
+           in COP_datainrdy : ns(1);
+           out COP_dataout : ns(32);
+           out COP_cmdout : ns(32);
+           out COP_dataoutrdy : ns(1);
+           out COP_stall : ns(1);
            
            // Slave interface (datamemory)
            in DM_datain : ns(32);
@@ -591,11 +618,18 @@ dp bus_toplevel(
            out OP_stall : ns(1)
            ){
            
-           sig reqCPU,reqDataMem,reqSensor,reqOutput,ackCPU,ackDataMem,ackSensor,ackOutput,dataRdyCPU,dataRdyDataMem,dataRdySensor,dataRdyOutput,waitCPU,waitDataMem,waitSensor,waitOutput: ns(1);
-           sig cmdCPU,cmdDataMem,cmdSensor,cmdOutput,dataoutCPU,datainDataMem,datainSensor,datainOutput,datainCPU,dataoutDataMem,dataoutSensor,dataoutOutput : ns(32);
+           sig reqCPU,reqCoP,reqDataMem,reqSensor,reqOutput,ackCPU,ackCoP,ackDataMem,ackSensor,ackOutput,dataRdyCPU,dataRdyCoP,dataRdyDataMem,dataRdySensor,dataRdyOutput,waitCPU,waitCoP,waitDataMem,waitSensor,waitOutput: ns(1);
+           sig cmdCPU,cmdCoP,cmdDataMem,cmdSensor,cmdOutput,dataoutCPU,datainCoP,datainDataMem,datainSensor,datainOutput,datainCPU,dataoutCoP,dataoutDataMem,dataoutSensor,dataoutOutput : ns(32);
            reg ID_DataMem : ns(4);
            reg ID_Sensor : ns(4);
            reg ID_Output : ns(4);
+           reg ID_CoP : ns(4);
+
+           $trace(COP_datain, "traces/COP_datain.seq");
+           $trace(COP_datainrdy, "traces/COP_datainrdy.seq");
+           $trace(COP_dataout, "traces/COP_dataout.seq");
+           $trace(COP_cmdout, "traces/COP_cmdout.seq");
+           $trace(COP_dataoutrdy, "traces/COP_dataoutrdy.seq");
            
            $trace(DM_datain, "traces/DM_datain.seq");
            $trace(DM_datainrdy, "traces/DM_datainrdy.seq");
@@ -616,10 +650,11 @@ dp bus_toplevel(
            $trace(OP_dataoutrdy, "traces/OP_dataoutrdy.seq");
            
            use bus(reqCPU,cmdCPU,dataoutCPU,ackCPU,dataRdyCPU,datainCPU,waitCPU, // master
+                   reqCoP,cmdCoP,datainCoP,ackCoP,dataRdyCoP,dataoutCoP,waitCoP, // CoP (slave)
                    reqDataMem,cmdDataMem,datainDataMem,ackDataMem,dataRdyDataMem,dataoutDataMem,waitDataMem, // Data memory (slave)
                    reqSensor,cmdSensor,datainSensor,ackSensor,dataRdySensor,dataoutSensor,waitSensor,
                    reqOutput,cmdOutput,datainOutput,ackOutput,dataRdyOutput,dataoutOutput,waitOutput,// Sensor (slave)
-                   ID_Sensor,ID_DataMem,ID_Output); 
+                   ID_Sensor,ID_DataMem,ID_Output,ID_CoP); 
            
            use masterbusinterface(reqCPU,cmdCPU,dataoutCPU,ackCPU,dataRdyCPU,datainCPU,waitCPU, // Bus interface
                                   //CPUdatain,CPUcmd,CPUdatainrdy,CPUdataout,CPUdataoutrdy
@@ -636,11 +671,16 @@ dp bus_toplevel(
            use slavebusinterface3(reqOutput,cmdOutput,datainOutput,ackOutput,dataRdyOutput,dataoutOutput,waitOutput, // Bus interface (data memory)
                               //OPDatain,OPDatainrdy,OPDataout,OPCmdout,OPDataoutrdy,
                               OP_datain,OP_datainrdy,OP_dataout,OP_cmdout,OP_dataoutrdy,ID_Output,OP_stall);
+
+           use slavebusinterface4(reqCoP,cmdCoP,datainCoP,ackCoP,dataRdyCoP,dataoutCoP,waitCoP, // Bus interface (CoP)
+                              //COPDatain,COPDatainrdy,COPDataout,COPCmdout,COPDataoutrdy,
+                              COP_datain,COP_datainrdy,COP_dataout,COP_cmdout,COP_dataoutrdy,ID_CoP,COP_stall);
            
            always{
               ID_Sensor = 0x1;
               ID_DataMem = 0x2;
               ID_Output = 0x3;
+              ID_CoP = 0x4;
            }
 }
 
@@ -901,6 +941,171 @@ fsm Output_cntrl(Output){
 }
 
 ////////////////////////////
+// Co-Processor
+////////////////////////////
+dp CoPadd(
+  in a,b  :tc(32);
+  out r   :tc(32))
+  {
+    always{
+      r = a + b;
+    }
+  }
+
+dp CoPsub(
+  in a,b  :tc(32);
+  out r   :tc(32))
+  {
+    always{
+      r = a - b;
+    }
+  }
+
+dp CoPdiv32(
+  in a  :tc(32);
+  out r   :tc(32))
+  {
+    always{
+      r = a>>5;
+    }
+  }
+
+dp CoPregister(
+  in sel   : ns(5); 
+  in storeenable : ns(1);
+  in new      : ns(32);
+  in newsum   : ns(32);
+  out old     : ns(32);
+  out sum     : ns(32) 
+  ){
+  reg r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,r10,r11,r12,r13,r14,r15,r16   : tc(32);
+  reg r17,r18,r19,r20,r21,r22,r23,r24,r25,r26,r27,r28,r29,r30,r31,r32 : tc(32);
+  always{
+    old = (sel==0) ? r0 : 
+      (sel==1) ? r1 :
+      (sel==2) ? r2 :
+      (sel==3) ? r3 :
+      (sel==4) ? r4 : 
+      (sel==5) ? r5 :
+      (sel==6) ? r6 :
+      (sel==7) ? r7 :
+      (sel==8) ? r8 :
+      (sel==9) ? r9 :
+      (sel==10) ? r10 : 
+      (sel==11) ? r11 :
+      (sel==12) ? r12 :
+      (sel==13) ? r13 :
+      (sel==14) ? r14 :
+      (sel==15) ? r15 :
+      (sel==16) ? r16 : 
+      (sel==17) ? r17 :
+      (sel==18) ? r18 :
+      (sel==19) ? r19 :
+      (sel==20) ? r20 :
+      (sel==21) ? r21 :
+      (sel==22) ? r22 : 
+      (sel==23) ? r23 :
+      (sel==24) ? r24 :
+      (sel==25) ? r25 :
+      (sel==26) ? r26 :
+      (sel==27) ? r27 :
+      (sel==28) ? r28 : 
+      (sel==29) ? r29 :
+      (sel==30) ? r30 :
+                   r31;
+
+    sum = r32;
+    r32 = storeenable ? newsum : r32;
+
+    r0 = storeenable ? (sel==0) ? new : r0 : r0;
+    r1 = storeenable ? (sel==1) ? new : r1 : r1;
+    r2 = storeenable ? (sel==2) ? new : r2 : r2;
+    r3 = storeenable ? (sel==3) ? new : r3 : r3;
+    r4 = storeenable ? (sel==4) ? new : r4 : r4;
+    r5 = storeenable ? (sel==5) ? new : r5 : r5;
+    r6 = storeenable ? (sel==6) ? new : r6 : r6;
+    r7 = storeenable ? (sel==7) ? new : r7 : r7;
+    r8 = storeenable ? (sel==8) ? new : r8 : r8;
+    r9 = storeenable ? (sel==9) ? new : r9 : r9;
+    r10 = storeenable ? (sel==10) ? new : r10 : r10;
+    r11 = storeenable ? (sel==11) ? new : r11 : r11;
+    r12 = storeenable ? (sel==12) ? new : r12 : r12;
+    r13 = storeenable ? (sel==13) ? new : r13 : r13;
+    r14 = storeenable ? (sel==14) ? new : r14 : r14;
+    r15 = storeenable ? (sel==15) ? new : r15 : r15;
+    r16 = storeenable ? (sel==16) ? new : r16 : r16;
+    r17 = storeenable ? (sel==17) ? new : r17 : r17;
+    r18 = storeenable ? (sel==18) ? new : r18 : r18;
+    r19 = storeenable ? (sel==19) ? new : r19 : r19;
+    r20 = storeenable ? (sel==20) ? new : r20 : r20;
+    r21 = storeenable ? (sel==21) ? new : r21 : r21;
+    r22 = storeenable ? (sel==22) ? new : r22 : r22;
+    r23 = storeenable ? (sel==23) ? new : r23 : r23;
+    r24 = storeenable ? (sel==24) ? new : r24 : r24;
+    r25 = storeenable ? (sel==25) ? new : r25 : r25;
+    r26 = storeenable ? (sel==26) ? new : r26 : r26;
+    r27 = storeenable ? (sel==27) ? new : r27 : r27;
+    r28 = storeenable ? (sel==28) ? new : r28 : r28;
+    r29 = storeenable ? (sel==29) ? new : r29 : r29;
+    r30 = storeenable ? (sel==30) ? new : r30 : r30;
+    r31 = storeenable ? (sel==31) ? new : r31 : r31;
+  }
+  }
+
+dp CoPinrdyreg(in outrdy : ns(1);
+            out inrdy : ns(1))
+{
+  reg rinrdy : ns(1);
+
+  always{
+    rinrdy = outrdy;
+    inrdy = rinrdy;
+  }
+}
+
+dp CoPC(  in outrdy        : ns(1);
+        in inrdy         : ns(1);
+        out pc_out    : ns(5))
+  {
+  reg PCr : ns(5);
+  sig incVal : ns(1);
+  sig Val : ns(5);
+
+  always{
+    incVal = (~outrdy) & inrdy;
+    Val = PCr + outrdy;
+    pc_out = (Val == 31) ? 0 : Val;
+    PCr = pc_out;
+  }
+}
+
+dp CoP(
+           in S_dataout : ns(32);
+           in S_cmdout : ns(32);
+           in S_dataoutrdy : ns(1);
+           out S_datain : ns(32);
+           out S_datainrdy : ns(1)
+       ){
+        sig pc_out      : ns(5);
+        sig old     : ns(32);
+        sig sum     : ns(32);
+        sig sumsub  : ns(32);
+        sig finalsum: ns(32);
+        reg result  : ns(32);
+
+        use CoPC(S_dataoutrdy,S_datainrdy,pc_out);
+        use CoPregister(pc_out,S_dataoutrdy,S_dataout,finalsum,old,sum);
+        use CoPsub(sum,old,sumsub);
+        use CoPadd(sumsub,S_dataout,finalsum);
+        use CoPdiv32(finalsum,result);
+        use CoPinrdyreg(S_dataoutrdy,S_datainrdy);
+
+       always{
+          S_datain = result;
+       }       
+}
+
+////////////////////////////
 // System connections
 ////////////////////////////
 system CPUsystem{
@@ -908,10 +1113,12 @@ system CPUsystem{
    CPU(CPUdatain,CPUcmd,CPUdatainrdy,CPUdataout,CPUdataoutrdy);
    
    bus_toplevel(CPUdatain,CPUcmd,CPUdatainrdy,CPUdataout,CPUdataoutrdy, // master unit
+           COPDatain,COPDatainrdy,COPDataout,COPCmdout,COPDataoutrdy,COPStall, // slave (CoP)
            DMDatain,DMDatainrdy,DMDataout,DMCmdout,DMDataoutrdy,DMStall, // slave (data memory)
            SensorDatain,SensorDatainrdy,SensorDataout,SensorCmdout,SensorDataoutrdy,SensorStall,  // slave (sensor)
            OPDatain,OPDatainrdy,OPDataout,OPCmdout,OPDataoutrdy,OPStall); // slave (Output)
-           
+
+   CoP(COPDataout,COPCmdout,COPDataoutrdy,COPDatain,COPDatainrdy); // Co-Processor
    DataMem(DMDataout,DMCmdout,DMDataoutrdy,DMDatain,DMDatainrdy,DMStall); // Data Memory Unit
    Sensor(SensorDataout,SensorCmdout,SensorDataoutrdy,SensorDatain,SensorDatainrdy,SensorStall);
    Output(OPDataout,OPCmdout,OPDataoutrdy,OPDatain,OPDatainrdy,OPStall,FilterOut);
