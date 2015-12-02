@@ -77,12 +77,12 @@ dp register(
     r6 = (storeenable==1) ? (storesel==6) ? storedata : r6: r6 ;
     r7 = (storeenable==1) ? (storesel==7) ? storedata : r7: r7 ;
 
-    //$display($dec,"r7:", r7);  // New data pointer
+    $display($dec,"r7:", r7);  // New data pointer
     //$display($dec,"r2:",r2);  // Old data pointer
     //$display($dec,"r1:",r1);  // New data 
     //$display($dec,"r6:"r6);  // Old data
     //$display($dec,"r3:",r3);  // sum
-    $display($dec,s4);  // Result inspection
+    //$display($dec,s4);  // Result inspection
   }
 
   $trace(r1, "traces/r1.seq");
@@ -234,7 +234,7 @@ dp CPU(
           //$display($dec, "mrd:",mrd,", rdy: ", M_dataoutrdy, ", dout:", M_dataout, ", datain:", M_datain);
           //$display($dec, "cops:",cops,", rdy: ", M_dataoutrdy, ", dout:", M_dataout, ", datain:", M_datain,$bin, ", cmd:",M_cmd);
           //$display($dec,"pc:",pc_out);
-          //$display($dec, "Cycle:",$cycle);
+          $display($dec, "Cycle:",$cycle);
           outstore = (M_dataoutrdy & regwrite);
        }       
 }
@@ -1066,61 +1066,45 @@ dp CoPregister(
   $trace(r32, "traces/sum.seq");
   }
 
-dp CoPoutrdyreg(in inrdy : ns(1);
-            out outrdy : ns(1))
-{
-  reg routrdy : ns(1);
-
-  always{
-    routrdy = inrdy;
-    outrdy = routrdy;
-  }
-}
-
-dp CoPC(  in outrdy        : ns(1);
-        in inrdy         : ns(1);
+dp CoPC(  in inrdy        : ns(1);
         out pc_out    : ns(5))
   {
   reg PCr : ns(5);
-  sig incVal : ns(1);
   sig Val : ns(5);
 
   always{
-    incVal = (~outrdy) & inrdy;
-    Val = PCr + outrdy;
+    Val = PCr + inrdy;
     pc_out = (Val == 32) ? 0 : Val;
     PCr = pc_out;
   }
 }
 
 dp CoP(
-       in datain : ns(32);
-       in cmd : ns(32);
-       in datainrdy : ns(1);
-       out dataout : ns(32);
+       in datain      : ns(32);
+       in cmd         : ns(32);
+       in datainrdy   : ns(1);
+       out dataout    : ns(32);
        out dataoutrdy : ns(1);
-       in stall : ns(1)
+       in stall       : ns(1)
    ){
     sig pc_out      : ns(5);
     sig old     : ns(32);
     sig sum     : ns(32);
     sig sumsub  : ns(32);
     sig finalsum: ns(32);
-    sig inc     : ns(1);
     reg result  : ns(32);
 
-    reg datainrdyr : ns(1);
-    reg cmdr : ns(32);
-    reg datainr : ns(32);
-    reg dataoutr : ns(32);
-    reg stallr : ns(1);
+    reg datainrdyr  : ns(1);
+    reg cmdr        : ns(32);
+    reg datainr     : ns(32);
+    reg dataoutr    : ns(32);
+    reg stallr      : ns(1);
 
-    use CoPC(datainrdy,inc,pc_out);
+    use CoPC(datainrdy,pc_out);
     use CoPregister(pc_out,datainrdy,datain,finalsum,old,sum);
     use CoPsub(sum,old,sumsub);
     use CoPadd(sumsub,datain,finalsum);
     use CoPdiv32(finalsum,result);
-    use CoPoutrdyreg(datainrdy,inc);
 
    always{
       stallr = stall;
@@ -1161,14 +1145,13 @@ dp CoP(
 
 fsm DataMem_cntrl(CoP){
    initial s0;
-   state s1, s2;
+   state s1;
    
    @s0 if (datainrdyr == 1 & stallr == 0) then (resetAndSignalRdy) -> s0;
        else if (datainrdyr == 1 & stallr == 1) then (awaithandshake) -> s1;
        else (captureData) -> s0;
-   @s1 nothing -> s2;
-   @s2 if (stallr == 0) then (resetAndSignalRdy) -> s0;
-       else (awaithandshake) -> s2;
+   @s1 if (stallr == 0) then (resetAndSignalRdy) -> s0;
+       else (awaithandshake) -> s1;
        
 }
 
