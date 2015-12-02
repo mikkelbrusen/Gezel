@@ -24,6 +24,7 @@ dp mux(
 
 dp muxalu  : mux
 dp muxmem  : mux
+dp muxstore : mux
 
 dp alu(
   in a, b   :tc(32);
@@ -47,7 +48,9 @@ dp register(
   out a,b         : tc(32)
 ){
   reg r0,r1,r2,r3,r4,r5,r6,r7 : tc(32);
+  sig s4 : tc(32);
   always{
+    s4 = r4;
     a = (asel==0) ? r0 : 
       (asel==1) ? r1 :
       (asel==2) ? r2 :
@@ -79,7 +82,7 @@ dp register(
     //$display($dec,"r1:",r1);  // New data 
     //$display($dec,"r6:"r6);  // Old data
     //$display($dec,"r3:",r3);  // sum
-    //$display($dec,"r4:",r4);  // Result inspection
+    $display($dec,s4);  // Result inspection
   }
 
   $trace(r1, "traces/r1.seq");
@@ -122,7 +125,7 @@ dp control( in up         : ns(4);
       out regwrite, muxalus : ns(1);
       out alus       : ns(2);
       out bneg, branch   : ns(1);
-      out mwr, mrd, muxmems, cops : ns(1))
+      out mwr, mrd, muxmems, cops, muxss : ns(1))
 {
   always{
     regwrite = ((up == 0b1010) | (up == 0b1001) | (up == 0b0001) | (up == 0b0010) | (up == 0b0100) | (up == 0b0110) | (up == 0b1000)) ? 1 : 0;
@@ -134,6 +137,7 @@ dp control( in up         : ns(4);
     mrd = (up == 0b1001); 
     muxmems = (up == 0b1001) | (up == 0b1010);
     cops = (up == 0b1010);
+    muxss = (up == 0b1010);
   }
 }
 
@@ -191,11 +195,12 @@ dp CPU(
         sig mwr, mrd  : ns(1);
         sig stall, memoro, muxmems,cops : ns(1);
         sig muxmemo : ns(32);
+        sig storeenable, muxss,outstore : ns(1);
 
         use PC(jump, extendo[0:4], stall, pc_out);
         use instmem(pc_out,0,1,0,inst);
-        use control(inst[28:31],regwrite,muxalus,alus,bneg,branch,mwr,mrd,muxmems,cops);
-        use register(inst[25:27],inst[22:24],inst[19:21],regwrite,muxmemo,a,b);
+        use control(inst[28:31],regwrite,muxalus,alus,bneg,branch,mwr,mrd,muxmems,cops,muxss);
+        use register(inst[25:27],inst[22:24],inst[19:21],storeenable,muxmemo,a,b);
         use alu(a,muxaluo,alus,alu_out,neg);
         use signExtend(inst[0:15],extendo);
         use and(neg, bneg, andout);
@@ -204,6 +209,7 @@ dp CPU(
         use memor(cops,mrd,memoro);
         use xor(memoro,M_dataoutrdy,stall);
         use muxmem(muxmems,alu_out,M_dataout,muxmemo);
+        use muxstore(muxss,regwrite,outstore,storeenable);
 
         $trace(alu_out, "traces/aluOut.seq");
         $trace(bneg, "traces/bneg.seq");
@@ -217,6 +223,7 @@ dp CPU(
         $trace(M_dataout, "traces/CPUM_dataout.seq");
         $trace(pc_out, "traces/pc_out.seq");
         $trace(cops, "traces/cops.seq");
+        $trace(storeenable, "traces/storeenable.seq");
 
        always{
        		M_datain = b;
@@ -228,6 +235,7 @@ dp CPU(
           //$display($dec, "cops:",cops,", rdy: ", M_dataoutrdy, ", dout:", M_dataout, ", datain:", M_datain,$bin, ", cmd:",M_cmd);
           //$display($dec,"pc:",pc_out);
           //$display($dec, "Cycle:",$cycle);
+          outstore = (M_dataoutrdy & regwrite);
        }       
 }
 
